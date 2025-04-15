@@ -312,39 +312,43 @@ pub(crate) fn holds_opaque_without_ref(typ: &Type) -> bool {
 
 /// Maps something like `common` to `Company.Common` in C# and similar.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct NamespaceMappings {
-    mappings: HashMap<String, String>,
+pub struct NamespaceMappings<T> {
+    mappings: HashMap<String, T>,
 }
 
-impl NamespaceMappings {
+impl<T> NamespaceMappings<T> {
     /// Creates a new mapping, assinging namespace id `""` to `default`.
     #[must_use]
-    pub fn new(default: &str) -> Self {
+    pub fn new(default: impl Into<T> + Clone) -> Self {
         let mut mappings = HashMap::new();
-        mappings.insert(String::new(), default.to_string());
-        mappings.insert("_global".to_string(), default.to_string());
+        mappings.insert(String::new(), default.clone().into());
+        mappings.insert(String::from("ffi"), default.into());
 
         Self { mappings }
     }
 
     /// Adds a mapping between namespace `id` to string `value`.
     #[must_use]
-    pub fn add(mut self, id: &str, value: &str) -> Self {
-        self.mappings.insert(id.to_string(), value.to_string());
+    pub fn add(mut self, id: &str, value: impl Into<T>) -> Self {
+        self.mappings.insert(id.to_string(), value.into());
         self
     }
 
     /// Returns the default namespace mapping
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
-    pub fn default_namespace(&self) -> &str {
+    pub fn default_namespace(&self) -> &T {
         self.get("").expect("This must exist")
     }
 
     /// Obtains a mapping for the given ID.
     #[must_use]
-    pub fn get(&self, id: &str) -> Option<&str> {
-        self.mappings.get(id).map(String::as_str)
+    pub fn get(&self, id: &str) -> Option<&T> {
+        self.mappings.get(id)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &T)> {
+        self.mappings.iter()
     }
 }
 

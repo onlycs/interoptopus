@@ -12,5 +12,12 @@ pub fn write_imports(i: &Interop, w: &mut IndentWriter) -> Result<(), Error> {
         indented!(w, "#include {}", include)?;
     }
 
+    for ns_id in i.inventory.namespaces() {
+        let namespace = i.path_for_namespace(&ns_id);
+        indented!(w, r"#include <{}>", namespace.to_string_lossy().to_string())?;
+    }
+
+    w.newline()?;
+
     Ok(())
 }

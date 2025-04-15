@@ -157,6 +157,7 @@ pub fn ffi_function_freestanding(ffi_attributes: &Attributes, input: TokenStream
     }
 
     item_fn.attrs.push(syn::parse_quote!(#[unsafe(export_name = #export_name)]));
+    let module = &ffi_attributes.namespace;
 
     let rval = quote! {
         #item_fn
@@ -172,6 +173,7 @@ pub fn ffi_function_freestanding(ffi_attributes: &Attributes, input: TokenStream
 
                 let mut doc_lines = ::std::vec::Vec::new();
                 let mut params = ::std::vec::Vec::new();
+                let mut module = ::std::string::String::from(#module);
 
                 #(
                     params.push(::interoptopus::lang::Parameter::new(#args_name.to_string(), #args_type));
@@ -183,7 +185,7 @@ pub fn ffi_function_freestanding(ffi_attributes: &Attributes, input: TokenStream
 
                 let sig = ::interoptopus::lang::Signature::new(params, #rval);
                 let docs = ::interoptopus::lang::Docs::from_lines(doc_lines);
-                let meta = ::interoptopus::lang::Meta::with_docs(docs);
+                let meta = ::interoptopus::lang::Meta::with_module_docs(module, docs);
 
                 ::interoptopus::lang::Function::new(#export_name.to_string(), sig, meta)
             }

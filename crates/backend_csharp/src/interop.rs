@@ -135,7 +135,7 @@ pub struct Interop {
     dll_name: String,
     /// Maps which namespace id belongs into which FQN (e.g., "common" => "MyCompany.Common").
     #[builder(setter(into))]
-    namespace_mappings: NamespaceMappings,
+    namespace_mappings: NamespaceMappings<String>,
     /// Namespace ID of _this_ namespace to write (default "").
     #[builder(setter(into))]
     namespace_id: String,
