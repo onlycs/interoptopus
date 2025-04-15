@@ -1,5 +1,6 @@
 use crate::converters::{
-    composite_to_typename, enum_to_typename, enum_variant_to_name, fnpointer_to_typename, named_callback_to_typename, opaque_to_typename, to_type_specifier,
+    composite_to_typename, enum_to_typename, enum_variant_to_name, fnpointer_to_typename, named_callback_to_typename, opaque_to_typename, to_namespaced_specifier,
+    to_type_specifier,
 };
 use crate::interop::ToNamingStyle;
 use crate::interop::docs::write_documentation;
@@ -108,6 +109,10 @@ fn write_type_definition_fn_pointer_body(i: &Interop, w: &mut IndentWriter, the_
 }
 
 fn write_type_definition_named_callback(i: &Interop, w: &mut IndentWriter, the_type: &NamedCallback) -> Result<(), Error> {
+    if the_type.meta().module() != i.namespace {
+        return Ok(());
+    }
+
     write_type_definition_named_callback_body(i, w, the_type)
 }
 
@@ -126,6 +131,10 @@ fn write_type_definition_named_callback_body(i: &Interop, w: &mut IndentWriter, 
 }
 
 fn write_type_definition_enum(i: &Interop, w: &mut IndentWriter, the_type: &Enum) -> Result<(), Error> {
+    if the_type.meta().module() != i.namespace {
+        return Ok(());
+    }
+
     let name = enum_to_typename(i, the_type);
 
     if i.documentation == DocStyle::Inline {
@@ -156,6 +165,10 @@ fn write_type_definition_enum_variant(i: &Interop, w: &mut IndentWriter, variant
 }
 
 fn write_type_definition_opaque(i: &Interop, w: &mut IndentWriter, the_type: &Opaque) -> Result<(), Error> {
+    if the_type.meta().module() != i.namespace {
+        return Ok(());
+    }
+
     if i.documentation == DocStyle::Inline {
         write_documentation(w, the_type.meta().docs())?;
     }
@@ -175,6 +188,10 @@ fn write_type_definition_opaque_body(i: &Interop, w: &mut IndentWriter, the_type
 }
 
 fn write_type_definition_composite(i: &Interop, w: &mut IndentWriter, the_type: &Composite) -> Result<(), Error> {
+    if the_type.meta().module() != i.namespace {
+        return Ok(());
+    }
+
     if i.documentation == DocStyle::Inline {
         write_documentation(w, the_type.meta().docs())?;
     }
@@ -220,11 +237,11 @@ fn write_type_definition_composite_body_field(i: &Interop, w: &mut IndentWriter,
     let field_name = field.name();
 
     if let Type::Array(x) = field.the_type() {
-        let type_name = to_type_specifier(i, x.the_type());
+        let type_name = to_namespaced_specifier(i, x.the_type());
         indented!(w, r"{} {}[{}];", type_name, field_name, x.len())
     } else {
         let field_name = field.name();
-        let type_name = to_type_specifier(i, field.the_type());
+        let type_name = to_namespaced_specifier(i, field.the_type());
         indented!(w, r"{} {};", type_name, field_name)
     }
 }

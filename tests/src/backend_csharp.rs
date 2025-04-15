@@ -4,7 +4,7 @@ use std::io::ErrorKind;
 use std::path::Path;
 use std::process::Command;
 
-pub fn common_namespace_mappings() -> NamespaceMappings {
+pub fn common_namespace_mappings() -> NamespaceMappings<String> {
     NamespaceMappings::new("My.Company").add("common", "My.Company.Common")
 }
 

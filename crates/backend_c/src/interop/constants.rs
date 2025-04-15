@@ -14,6 +14,10 @@ pub fn write_constants(i: &Interop, w: &mut IndentWriter) -> Result<(), Error> {
 }
 
 pub fn write_constant(i: &Interop, w: &mut IndentWriter, constant: &Constant) -> Result<(), Error> {
+    if constant.meta().module() != i.namespace {
+        return Ok(());
+    }
+
     let name = const_name_to_name(i, constant);
     let the_type = match constant.the_type() {
         Type::Primitive(x) => primitive_to_typename(x),

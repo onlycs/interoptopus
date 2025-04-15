@@ -3,9 +3,14 @@ mod defines;
 mod docs;
 mod functions;
 mod imports;
+mod namespace;
 mod types;
 
+use std::fs::{self, OpenOptions};
+use std::path::PathBuf;
+
 pub use functions::write_function_declaration;
+use namespace::write_namespaces;
 pub use types::write_type_definition;
 
 use crate::interop::constants::write_constants;
@@ -17,7 +22,7 @@ use crate::interop::types::write_type_definitions;
 use derive_builder::Builder;
 use heck::{ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use interoptopus::Error;
-use interoptopus::backend::IndentWriter;
+use interoptopus::backend::{IndentWriter, NamespaceMappings};
 use interoptopus::inventory::{Bindings, Inventory};
 
 /// How to lay out functions.
@@ -94,8 +99,7 @@ pub enum DocStyle {
 }
 
 /// Generates C header files, **get this with [`InteropBuilder`]**.🐙
-#[derive(Clone, Debug, Builder, Default)]
-#[builder(default)]
+#[derive(Clone, Debug, Builder)]
 pub struct Interop {
     /// Whether to write conditional directives like `#ifndef _X`.
     #[builder(default = "true")]
@@ -103,43 +107,53 @@ pub struct Interop {
     /// Whether to write `#include <>` directives.
     #[builder(default = "true")]
     imports: bool,
+    #[builder(default)]
     /// Additional `#include` lines in the form of `<item.h>` or `"item.h"`.
     additional_includes: Vec<String>,
-    /// The `_X` in `#ifndef _X` to be used.
+    /// The `_X` in `#ifndef _X` to be used. The namespace will be appended to this, if it is being used.
     #[builder(default = "\"interoptopus_generated\".to_string()")]
     ifndef: String,
     /// Multiline string with custom `#define` values.
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     custom_defines: String,
     /// Prefix to be applied to any function, e.g., `__DLLATTR`.
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     function_attribute: String,
     /// Comment at the very beginning of the file, e.g., `// (c) My Company.`
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     file_header_comment: String,
     /// How to prefix everything, e.g., `my_company_`, will be capitalized for constants.
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     pub(crate) prefix: String,
     /// How to indent code
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     indentation: Indentation,
     /// How to add code documentation
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     documentation: DocStyle,
+    /// Allow C++ features (namespaces)
+    #[builder(default = "true", setter(into))]
+    cpp: bool,
     /// How to convert type names
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     pub(crate) type_naming: NameCase,
     /// How to convert enum variant names
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     pub(crate) enum_variant_naming: NameCase,
     /// How to convert const names
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     pub(crate) const_naming: NameCase,
     /// How to convert function parameter names
-    #[builder(setter(into))]
+    #[builder(default, setter(into))]
     function_parameter_naming: NameCase,
+    /// Maps namespaces to file paths. The default will be the namespace name with `::`'s replaced by `/`'s.
+    #[builder(setter(into), default = "NamespaceMappings::new(PathBuf::from(\"ffi.h\"))")]
+    namespace_paths: NamespaceMappings<PathBuf>,
+    /// Current namespace
+    #[builder(setter(into), default)]
+    pub(crate) namespace: String,
     /// How to emit functions
-    #[builder(setter(into))]
+    #[builder(setter(into), default)]
     function_style: Functions,
     pub(crate) inventory: Inventory,
 }
@@ -147,6 +161,13 @@ pub struct Interop {
 impl Interop {
     pub(crate) fn inventory(&self) -> &Inventory {
         &self.inventory
+    }
+
+    fn path_for_namespace(&self, id: &str) -> PathBuf {
+        self.namespace_paths
+            .get(id)
+            .cloned()
+            .unwrap_or_else(|| PathBuf::from(id.split("::").collect::<Vec<_>>().join("/")).with_extension("h"))
     }
 
     fn write_to(&self, w: &mut IndentWriter) -> Result<(), Error> {
@@ -160,22 +181,42 @@ impl Interop {
                     w.newline()?;
                 }
 
-                write_custom_defines(self, w)?;
-                w.newline()?;
+                write_namespaces(self, w, |w| {
+                    write_custom_defines(self, w)?;
+                    w.newline()?;
 
-                write_constants(self, w)?;
-                w.newline()?;
+                    write_constants(self, w)?;
+                    w.newline()?;
 
-                write_type_definitions(self, w)?;
-                w.newline()?;
+                    write_type_definitions(self, w)?;
+                    w.newline()?;
 
-                write_functions(self, w)?;
+                    write_functions(self, w)?;
 
-                Ok(())
-            })?;
-
-            Ok(())
+                    Ok(())
+                })
+            })
         })?;
+
+        Ok(())
+    }
+
+    pub fn write_all(&mut self, root: &PathBuf) -> Result<(), Error> {
+        for namespace in self.inventory.namespaces() {
+            self.namespace = namespace.to_string();
+
+            let rel_path = self.path_for_namespace(namespace);
+            let ab_path = root.join(rel_path);
+
+            fs::create_dir_all(ab_path.parent().unwrap())?;
+
+            println!("Writing to: {}", ab_path.display());
+
+            let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(ab_path)?;
+            let mut w = IndentWriter::new(&mut f);
+
+            self.write_to(&mut w)?;
+        }
 
         Ok(())
     }

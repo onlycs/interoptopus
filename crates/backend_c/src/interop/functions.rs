@@ -1,4 +1,4 @@
-use crate::converters::{function_name_to_c_name, to_type_specifier};
+use crate::converters::{function_name_to_c_name, to_namespaced_specifier, to_type_specifier};
 use crate::interop::ToNamingStyle;
 use crate::interop::docs::write_documentation;
 use crate::{DocStyle, Functions, Interop};
@@ -7,14 +7,30 @@ use interoptopus::lang::{Function, Type};
 use interoptopus::{Error, indented};
 
 pub fn write_functions(i: &Interop, w: &mut IndentWriter) -> Result<(), Error> {
+    if i.cpp {
+        indented!(w, r"#ifdef __cplusplus")?;
+        indented!(w, r#"extern "C" {{"#)?;
+        indented!(w, r"#endif")?;
+    }
+
     for function in i.inventory.functions() {
         write_function(i, w, function)?;
+    }
+
+    if i.cpp {
+        indented!(w, r"#ifdef __cplusplus")?;
+        indented!(w, r#"}} // extern "C""#)?;
+        indented!(w, r"#endif")?;
     }
 
     Ok(())
 }
 
 fn write_function(i: &Interop, w: &mut IndentWriter, function: &Function) -> Result<(), Error> {
+    if function.meta().module() != i.namespace {
+        return Ok(());
+    }
+
     if i.documentation == DocStyle::Inline {
         write_documentation(w, function.meta().docs())?;
     }
@@ -41,10 +57,10 @@ pub fn write_function_declaration(i: &Interop, w: &mut IndentWriter, function: &
     for p in function.signature().params() {
         match p.the_type() {
             Type::Array(a) => {
-                params.push(format!("{} {}[{}]", to_type_specifier(i, a.the_type()), p.name().to_naming_style(&i.function_parameter_naming), a.len(),));
+                params.push(format!("{} {}[{}]", to_namespaced_specifier(i, a.the_type()), p.name().to_naming_style(&i.function_parameter_naming), a.len(),));
             }
             _ => {
-                params.push(format!("{} {}", to_type_specifier(i, p.the_type()), p.name().to_naming_style(&i.function_parameter_naming)));
+                params.push(format!("{} {}", to_namespaced_specifier(i, p.the_type()), p.name().to_naming_style(&i.function_parameter_naming)));
             }
         }
     }

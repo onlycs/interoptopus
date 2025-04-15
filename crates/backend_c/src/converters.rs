@@ -66,6 +66,43 @@ pub fn to_type_specifier(g: &Interop, x: &Type) -> String {
     }
 }
 
+pub fn to_namespaced_specifier(g: &Interop, x: &Type) -> String {
+    match x {
+        Type::Primitive(x) => primitive_to_typename(*x),
+        Type::Enum(x) => {
+            let enum_name = enum_to_typename(g, x);
+            if !x.meta().module().is_empty() {
+                format!("{}::{}", x.meta().module(), enum_name)
+            } else {
+                enum_name
+            }
+        }
+        Type::Opaque(x) => {
+            let opaque_name = opaque_to_typename(g, x);
+            if !x.meta().module().is_empty() {
+                format!("{}::{}", x.meta().module(), opaque_name)
+            } else {
+                opaque_name
+            }
+        }
+        Type::Composite(x) => {
+            let composite_name = composite_to_typename(g, x);
+            if !x.meta().module().is_empty() {
+                format!("{}::{}", x.meta().module(), composite_name)
+            } else {
+                composite_name
+            }
+        }
+        Type::ReadPointer(x) => format!("const {}*", to_namespaced_specifier(g, x)),
+        Type::ReadWritePointer(x) => format!("{}*", to_namespaced_specifier(g, x)),
+        Type::FnPointer(x) => fnpointer_to_typename(g, x),
+        Type::Pattern(TypePattern::CChar) => "char".to_string(),
+        Type::Pattern(TypePattern::NamedCallback(x)) => named_callback_to_typename(g, x),
+        Type::Pattern(x) => to_namespaced_specifier(g, &x.fallback_type()),
+        Type::Array(_) => panic!("Arrays need special handling in the writer."),
+    }
+}
+
 pub fn const_name_to_name(g: &Interop, x: &Constant) -> String {
     format!("{}{}", g.prefix, x.name()).to_naming_style(&g.const_naming)
 }
