@@ -210,8 +210,6 @@ impl Interop {
 
             fs::create_dir_all(ab_path.parent().unwrap())?;
 
-            println!("Writing to: {}", ab_path.display());
-
             let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(ab_path)?;
             let mut w = IndentWriter::new(&mut f);
 
