@@ -211,6 +211,8 @@ impl Type {
             Self::Opaque(t) => Some(t.meta().module()),
             Self::Composite(t) => Some(t.meta().module()),
             Self::Pattern(TypePattern::NamedCallback(t)) => Some(t.meta().module()),
+            Self::ReadPointer(t) => t.namespace(),
+            Self::ReadWritePointer(t) => t.namespace(),
             _ => None,
         }
     }
