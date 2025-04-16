@@ -15,7 +15,7 @@ pub fn write_imports(i: &Interop, w: &mut IndentWriter) -> Result<(), Error> {
         indented!(w, "#include {}", include)?;
     }
 
-    let mut include_namespaces = HashSet::<String>::new();
+    let mut include_namespaces = HashSet::new();
 
     for ty in i.inventory.ctypes() {
         let Some(ns) = ty.namespace() else {
