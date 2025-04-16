@@ -33,6 +33,14 @@ pub enum Functions {
     ForwardDeclarations,
 }
 
+/// How to name enum variants
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub enum EnumVariants {
+    #[default]
+    WithEnumName,
+    VariantName,
+}
+
 /// How to indent (Allman, K&R, ...)
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum Indentation {
@@ -135,16 +143,16 @@ pub struct Interop {
     #[builder(default = "true", setter(into))]
     cpp: bool,
     /// How to convert type names
-    #[builder(default, setter(into))]
+    #[builder(default = "NameCase::Lower", setter(into))]
     pub(crate) type_naming: NameCase,
     /// How to convert enum variant names
-    #[builder(default, setter(into))]
+    #[builder(default = "NameCase::Upper", setter(into))]
     pub(crate) enum_variant_naming: NameCase,
     /// How to convert const names
-    #[builder(default, setter(into))]
+    #[builder(default = "NameCase::ShoutySnake", setter(into))]
     pub(crate) const_naming: NameCase,
     /// How to convert function parameter names
-    #[builder(default, setter(into))]
+    #[builder(default = "NameCase::Snake", setter(into))]
     function_parameter_naming: NameCase,
     /// Maps namespaces to file paths. The default will be the namespace name with `::`'s replaced by `/`'s.
     #[builder(setter(into), default = "NamespaceMappings::new(PathBuf::from(\"ffi.h\"))")]
@@ -155,6 +163,9 @@ pub struct Interop {
     /// How to emit functions
     #[builder(setter(into), default)]
     function_style: Functions,
+    /// How to emit enum variants
+    #[builder(setter(into), default)]
+    pub(crate) enum_variant_style: EnumVariants,
     pub(crate) inventory: Inventory,
 }
 
