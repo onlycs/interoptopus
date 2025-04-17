@@ -141,7 +141,8 @@ fn write_type_definition_enum(i: &Interop, w: &mut IndentWriter, the_type: &Enum
         write_documentation(w, the_type.meta().docs())?;
     }
 
-    write_braced_declaration_opening(i, w, &format!("typedef enum {name}"))?;
+    let enum_decl = if i.cpp { "enum class" } else { "typedef enum" };
+    write_braced_declaration_opening(i, w, &format!("{enum_decl} {name}"))?;
 
     for variant in the_type.variants() {
         write_type_definition_enum_variant(i, w, variant, the_type)?;
