@@ -160,12 +160,12 @@ pub struct Interop {
     /// Current namespace
     #[builder(setter(into), default)]
     pub(crate) namespace: String,
+    /// How to emit enum variants
+    #[builder(setter(into))]
+    pub(crate) enum_variant_style: EnumVariants,
     /// How to emit functions
     #[builder(setter(into), default)]
     function_style: Functions,
-    /// How to emit enum variants
-    #[builder(setter(into), default)]
-    pub(crate) enum_variant_style: EnumVariants,
     pub(crate) inventory: Inventory,
 }
 
