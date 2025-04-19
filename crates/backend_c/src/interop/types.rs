@@ -185,7 +185,8 @@ fn write_type_definition_opaque(i: &Interop, w: &mut IndentWriter, the_type: &Op
 
 fn write_type_definition_opaque_body(i: &Interop, w: &mut IndentWriter, the_type: &Opaque) -> Result<(), Error> {
     let name = opaque_to_typename(i, the_type);
-    indented!(w, r"typedef struct {} {};", name, name)
+    let decl = if i.cpp { "struct" } else { "typedef struct" };
+    indented!(w, r"{} {} {};", decl, name, if !i.cpp { name.as_str() } else { "{}" })
 }
 
 fn write_type_definition_composite(i: &Interop, w: &mut IndentWriter, the_type: &Composite) -> Result<(), Error> {
@@ -197,11 +198,8 @@ fn write_type_definition_composite(i: &Interop, w: &mut IndentWriter, the_type: 
         write_documentation(w, the_type.meta().docs())?;
     }
 
-    let name = composite_to_typename(i, the_type);
-
     if the_type.is_empty() {
-        // C doesn't allow us writing empty structs.
-        indented!(w, r"typedef struct {} {};", name, name)?;
+        write_type_definition_opaque_body(i, w, &Opaque::new(the_type.rust_name().to_string(), the_type.meta().clone()))?;
         Ok(())
     } else {
         write_type_definition_composite_body(i, w, the_type)
@@ -216,7 +214,8 @@ fn write_type_definition_composite_body(i: &Interop, w: &mut IndentWriter, the_t
         indented!(w, "#pragma pack(push, {})", align)?;
     }
 
-    write_braced_declaration_opening(i, w, format!(r"typedef struct {name}").as_str())?;
+    let decl = if i.cpp { "struct" } else { "typedef struct" };
+    write_braced_declaration_opening(i, w, format!(r"{decl} {name}").as_str())?;
 
     for field in the_type.fields() {
         write_type_definition_composite_body_field(i, w, field, the_type)?;
@@ -274,6 +273,8 @@ fn write_braced_declaration_opening(i: &Interop, w: &mut IndentWriter, definitio
 }
 
 fn write_braced_declaration_closing(i: &Interop, w: &mut IndentWriter, name: &str) -> Result<(), Error> {
+    let name = if !i.cpp { name } else { "" };
+
     match i.indentation {
         Indentation::Allman | Indentation::KAndR => {
             w.unindent();
