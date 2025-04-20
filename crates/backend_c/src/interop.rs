@@ -221,10 +221,13 @@ impl Interop {
 
             fs::create_dir_all(ab_path.parent().unwrap())?;
 
-            let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(ab_path)?;
+            let mut f = OpenOptions::new().write(true).create(true).truncate(true).open(&ab_path)?;
             let mut w = IndentWriter::new(&mut f);
 
             self.write_to(&mut w)?;
+
+            // run clang-format on the file
+            std::process::Command::new("clang-format").arg("-i").arg(ab_path).output()?;
         }
 
         Ok(())
