@@ -227,7 +227,11 @@ impl Interop {
             self.write_to(&mut w)?;
 
             // run clang-format on the file
-            std::process::Command::new("clang-format").arg("-i").arg(ab_path).output()?;
+            std::process::Command::new("clang-format")
+                .arg("-style={BasedOnStyle: LLVM, UseTab: Never, IndentWidth: 4, TabWidth: 4, BreakBeforeBraces: Allman, AllowShortIfStatementsOnASingleLine: false, IndentCaseLabels: false, ColumnLimit: 0, AccessModifierOffset: -4, FixNamespaceComments: false}")
+                .arg("-i")
+                .arg(ab_path.clone())
+                .output()?;
         }
 
         Ok(())
